@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Music Playlist Generator</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>🎵 Music Playlist Generator</h1>
+
+    <label for="mood">Choose a mood:</label>
+    <select id="mood">
+      <option value="chill">Chill</option>
+      <option value="happy">Happy</option>
+      <option value="energetic">Energetic</option>
+      <option value="focus">Focus</option> 
+      <option value="sad">Sad</option>
+    </select>
+
+    <div class="buttons">
+      <button id="generate">Generate Playlist</button>
+      <button id="save">Save Playlist</button>
+      <button id="load">Load Saved Playlist</button>
+      <button id="clear">Clear Playlist</button>
+    </div>
+
+    <div id="playlist" class="playlist-container"></div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

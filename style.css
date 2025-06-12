@@ -1,0 +1,147 @@
+/* Reset some basics */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 40px auto;
+  padding: 30px 60px;
+  background-color: rgba(38, 38, 38, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(118, 75, 162, 0.8);
+  text-align: center;
+  transition: max-width 0.3s ease;
+}
+
+h1 {
+  font-size: 2.8rem;
+  margin-bottom: 30px;
+  color: #e0d7ff;
+  text-shadow: 0 0 12px #8855cc;
+}
+
+label {
+  font-size: 1.1rem;
+  margin-right: 12px;
+}
+
+select {
+  font-size: 1.1rem;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  margin-right: 15px;
+  outline: none;
+  cursor: pointer;
+}
+
+button {
+  font-size: 1.1rem;
+  padding: 10px 20px;
+  background: #8855cc;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin: 0 8px 20px 0;
+}
+
+button:hover {
+  background-color: #a678e0;
+}
+
+.playlist-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.song {
+  background-color: #292929;
+  padding: 15px;
+  border-radius: 10px;
+  width: 190px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.song:hover {
+  transform: scale(1.05);
+}
+
+.song img {
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.song h3 {
+  font-size: 1.1rem;
+  margin: 0 0 6px 0;
+  color: #d6caff;
+} 
+
+.song p {
+  font-size: 0.95rem;
+  margin: 0 0 12px 0;
+  color: #b0a1d4;
+}
+
+.song a {
+  display: inline-block;
+  text-decoration: none;
+  color: #a678e0;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.song a:hover {
+  color: #d6caff;
+}
+
+/* Responsive styles */
+@media (max-width: 720px) {
+  .container {
+    padding: 20px 30px;
+    max-width: 95vw;
+  }
+
+  button {
+    margin-bottom: 12px;
+  }
+
+  .playlist-container {
+    gap: 15px;
+  }
+
+  .song {
+    width: 140px;
+  }
+}
+
+@media (max-width: 400px) {
+  select, button {
+    width: 100%;
+    margin: 8px 0;
+  }
+}
