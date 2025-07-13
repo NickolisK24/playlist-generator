@@ -1,5 +1,4 @@
-// Full working script.js with CORS-safe backend integration and robust error handling
-
+// --- CONFIG ---
 const moodToCategory = {
   chill: "lofi",
   happy: "pop",
@@ -8,9 +7,77 @@ const moodToCategory = {
   sad: "acoustic"
 };
 
-window.currentSongs = [];
-window.customPlaylist = JSON.parse(localStorage.getItem("customPlaylist") || "[]");
+// --- GLOBAL STATE ---
+let currentSongs = [];
+let customPlaylist = JSON.parse(localStorage.getItem("customPlaylist") || "[]");
 
+// --- DOM HELPERS ---
+const $ = id => document.getElementById(id);
+
+// --- CORS-FRIENDLY TOKEN FETCH ---
+async function getAccessToken() {
+  try {
+    const res = await fetch("https://spotify-token-server-xoem.onrender.com/token");
+    const data = await res.json();
+    if (!res.ok || !data.access_token) throw new Error("Token fetch failed");
+    return data.access_token;
+  } catch (err) {
+    console.error("Token error:", err);
+    showError("Failed to get access token");
+    throw err;
+  }
+}
+
+// --- FILTERS ---
+function getFilters() {
+  return {
+    genre: $("genre-filter")?.value.trim() || "",
+    year: $("year-filter")?.value.trim() || "",
+    popularity: $("popularity-filter")?.value.trim() || ""
+  };
+}
+
+// --- LOADING + ERROR DISPLAY ---
+function showLoading(show) {
+  const el = $("loading");
+  if (el) el.style.display = show ? "block" : "none";
+}
+
+function showError(msg) {
+  const el = $("toast") || document.createElement("div");
+  el.id = "toast";
+  el.textContent = msg;
+  el.style = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#e44;color:#fff;padding:10px 20px;border-radius:8px;z-index:999;";
+  document.body.appendChild(el);
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 4000);
+}
+
+function showToast(msg) {
+  const el = $("toast");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 3000);
+}
+
+// --- THEME TOGGLE ---
+function setupThemeToggle() {
+  const btn = $("theme-toggle");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    document.body.classList.toggle("dark-mode");
+    const dark = document.body.classList.contains("dark-mode");
+    btn.textContent = dark ? "☀️ Light Mode" : "🌙 Dark Mode";
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  });
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark-mode");
+    btn.textContent = "☀️ Light Mode";
+  }
+}
+
+// --- PLAYLIST STORAGE ---
 function getPlaylists() {
   return JSON.parse(localStorage.getItem("playlists") || "{}");
 }
@@ -19,77 +86,62 @@ function savePlaylists(playlists) {
 }
 function updatePlaylistSelect() {
   const playlists = getPlaylists();
-  const select = document.getElementById("playlist-select");
-  if (!select) return;
-  select.innerHTML = "";
+  const sel = $("playlist-select");
+  sel.innerHTML = "";
   Object.keys(playlists).forEach(name => {
     const opt = document.createElement("option");
     opt.value = name;
     opt.textContent = name;
-    select.appendChild(opt);
+    sel.appendChild(opt);
   });
-  if (select.options.length > 0) select.value = select.options[0].value;
+  if (sel.options.length > 0) sel.value = sel.options[0].value;
 }
 function loadSelectedPlaylist() {
   const playlists = getPlaylists();
-  const select = document.getElementById("playlist-select");
-  const name = select.value;
+  const name = $("playlist-select").value;
   if (name && playlists[name]) {
-    document.getElementById("playlist-name").value = playlists[name].name || name;
-    document.getElementById("playlist-desc").value = playlists[name].desc || "";
-    window.currentSongs = playlists[name].songs || [];
-    displaySongs(window.currentSongs);
+    $("playlist-name").value = playlists[name].name || name;
+    $("playlist-desc").value = playlists[name].desc || "";
+    currentSongs = playlists[name].songs || [];
+    displaySongs(currentSongs);
     showToast(`Loaded playlist "${name}"`);
   }
 }
-function showToast(msg) {
-  const toast = document.getElementById("toast");
-  if (!toast) return console.warn("Toast element not found", msg);
-  toast.textContent = msg;
-  toast.style.display = "block";
-  setTimeout(() => { toast.style.display = "none"; }, 3000);
+
+// --- DISPLAY SONGS ---
+function displaySongs(songs) {
+  const container = $("playlist");
+  container.innerHTML = "";
+  songs.forEach(song => {
+    const div = document.createElement("div");
+    div.className = "song";
+    div.innerHTML = `
+      <img src="${song.album.images[0]?.url}" width="80" />
+      <p><strong>${song.name}</strong> by ${song.artists[0].name}</p>
+      <a href="${song.external_urls.spotify}" target="_blank">Spotify</a>
+    `;
+    container.appendChild(div);
+  });
 }
-function showError(msg) {
-  const toast = document.getElementById("toast");
-  if (!toast) return console.error("Error:", msg);
-  toast.textContent = `⚠️ ${msg}`;
-  toast.style.display = "block";
-  setTimeout(() => { toast.style.display = "none"; }, 4000);
-}
-function showLoading(state) {
-  const loading = document.getElementById("loading");
-  if (!loading) return;
-  loading.style.display = state ? "block" : "none";
-}
-function getFilters() {
-  const genre = document.getElementById("genre-filter")?.value || "";
-  const year = document.getElementById("year-filter")?.value || "";
-  const popularity = document.getElementById("popularity-filter")?.value || "";
-  return { genre, year, popularity };
-}
-async function getAccessToken() {
-  const res = await fetch('https://spotify-token-server-xoem.onrender.com/token');
-  const data = await res.json();
-  if (!res.ok) throw new Error('Failed to get token');
-  return data.access_token;
-}
+
+// --- FETCH SONGS ---
 async function fetchSongs(query) {
   showLoading(true);
   try {
-    const accessToken = await getAccessToken();
-    let url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=12`;
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` }
+    const token = await getAccessToken();
+    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
+      headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error('Failed to fetch tracks');
+    if (!res.ok) throw new Error("Spotify fetch error");
     const data = await res.json();
-    let songs = data.tracks.items;
+    const tracks = data.tracks.items;
     const { genre, year, popularity } = getFilters();
-    if (genre) songs = songs.filter(s => (s.genre || "").toLowerCase().includes(genre.toLowerCase()));
-    if (year) songs = songs.filter(s => String(s.album.release_date).includes(year));
-    if (popularity) songs = songs.filter(s => s.popularity >= Number(popularity));
-    window.currentSongs = songs;
-    displaySongs(songs);
+    let songs = tracks;
+    if (genre) songs = songs.filter(s => (s.genre || '').includes(genre));
+    if (year) songs = songs.filter(s => s.album.release_date.includes(year));
+    if (popularity) songs = songs.filter(s => s.popularity >= parseInt(popularity));
+    currentSongs = songs;
+    displaySongs(currentSongs);
   } catch (err) {
     showError(err.message);
   } finally {
@@ -97,49 +149,32 @@ async function fetchSongs(query) {
   }
 }
 
+// --- INIT ---
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("generate")?.addEventListener("click", () => {
-    const mood = document.getElementById("mood")?.value || "chill";
-    fetchPlaylistForMood(mood);
+  setupThemeToggle();
+  updatePlaylistSelect();
+  if ($("playlist-select").options.length > 0) loadSelectedPlaylist();
+
+  $("generate")?.addEventListener("click", () => {
+    const mood = $("mood").value;
+    fetchSongs(mood);
+  });
+
+  $("save")?.addEventListener("click", () => {
+    const playlists = getPlaylists();
+    const name = $("playlist-name").value.trim() || "Untitled";
+    const desc = $("playlist-desc").value.trim();
+    playlists[name] = { name, desc, songs: currentSongs };
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    showToast("Playlist saved!");
+  });
+
+  $("load")?.addEventListener("click", loadSelectedPlaylist);
+
+  $("clear")?.addEventListener("click", () => {
+    currentSongs = [];
+    displaySongs([]);
+    showToast("Playlist cleared!");
   });
 });
-
-async function fetchPlaylistForMood(mood) {
-  showLoading(true);
-  try {
-    const category = moodToCategory[mood.toLowerCase()];
-    const token = await getAccessToken();
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(category)}&type=playlist&limit=10`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await res.json();
-    const playlistId = data.playlists.items[0]?.id;
-    if (!playlistId) throw new Error("No playlist found");
-    const tracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const tracksData = await tracksRes.json();
-    window.currentSongs = tracksData.items.map(i => i.track);
-    displaySongs(window.currentSongs);
-  } catch (e) {
-    showError(e.message);
-  } finally {
-    showLoading(false);
-  }
-}
-
-function displaySongs(songs) {
-  const container = document.getElementById("playlist");
-  if (!container) return;
-  container.innerHTML = "";
-  songs.forEach(track => {
-    const div = document.createElement("div");
-    div.className = "song";
-    div.innerHTML = `
-      <h3>${track.name}</h3>
-      <p>${track.artists[0].name}</p>
-      <a href="${track.external_urls.spotify}" target="_blank">Play on Spotify</a>
-    `;
-    container.appendChild(div);
-  });
-}
