@@ -252,4 +252,41 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.files[0]) importJSON(e.target.files[0]);
   });
   $("share")?.addEventListener("click", sharePlaylist);
+
+  // --- NEW + DELETE PLAYLIST BUTTONS ---
+  $("new-playlist")?.addEventListener("click", () => {
+    const name = prompt("Enter new playlist name:").trim();
+    if (!name) return;
+    const playlists = getPlaylists();
+    if (playlists[name]) return showError("Playlist already exists");
+    playlists[name] = { name, desc: "", songs: [] };
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    $("playlist-select").value = name;
+    $("playlist-name").value = name;
+    $("playlist-desc").value = "";
+    currentSongs = [];
+    displaySongs([]);
+    showToast("New playlist created");
+  });
+
+  $("delete-playlist")?.addEventListener("click", () => {
+    const sel = $("playlist-select");
+    const name = sel.value;
+    if (!name) return;
+    if (!confirm(`Delete playlist "${name}"?`)) return;
+    const playlists = getPlaylists();
+    delete playlists[name];
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    if ($("playlist-select").options.length > 0) {
+      loadSelectedPlaylist();
+    } else {
+      $("playlist-name").value = "";
+      $("playlist-desc").value = "";
+      currentSongs = [];
+      displaySongs([]);
+    }
+    showToast("Playlist deleted");
+  });
 });
