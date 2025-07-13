@@ -55,7 +55,7 @@
       <option value="sad">Sad</option>
     </select>
 
-    <div class="buttons">
+    <div class="buttons" style="margin:10px 0;">
       <button id="generate">Generate Playlist</button>
       <button id="save">Save Playlist</button>
       <button id="load">Load Saved Playlist</button>
@@ -67,6 +67,11 @@
     </div>
 
     <input type="file" id="import-file" accept=".json" style="display:none;" />
+
+    <!-- Loading indicator added here -->
+    <div id="loading" style="display:none; text-align:center; color:#7c5fe6; margin: 10px 0; font-weight:bold;">
+      Loading...
+    </div>
 
     <div id="playlist" class="playlist-container">
       <!-- Song previews will be dynamically inserted here -->
