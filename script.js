@@ -273,8 +273,8 @@ function setupImportExportShare() {
 }
 
 async function getAccessToken() {
-  // Fetch the token from your backend
-  const res = await fetch('http://localhost:3000/token');
+  // Fetch the token from your deployed backend
+  const res = await fetch('https://spotify-token-server-xoem.onrender.com/token');
   const data = await res.json();
   if (!res.ok) throw new Error('Failed to get token');
   return data.access_token;
@@ -417,118 +417,119 @@ function showCustomPlaylist() {
     div.style.marginBottom = "8px";
     div.style.color = "#292929";
     div.innerHTML = `
-      <img src="${track.album && track.album.images && track.album.images[0] ? track.album.images[0].url : 'https://via.placeholder.com/60x60?text=No+Art'}" alt="Album Art for ${track.name || 'Unknown'}" style="max-width:60px; border-radius:8px; margin-bottom:6px;" />
-      <div style="font-weight:bold; font-size:1.05em; margin-bottom:2px;">${track.name || '<em>Unknown Title</em>'}</div>
-      <div style="color:#7c5fe6; font-size:0.98em; margin-bottom:4px;">by ${track.artists && track.artists[0] ? track.artists[0].name : '<em>Unknown Artist</em>'}</div>
-      <button class="remove-custom-btn" data-idx="${idx}" aria-label="Remove ${track.name || 'this song'} from custom playlist" style="margin-left:10px;">❌</button>
+      <img src="${track.album && track.album.images && track.album.images[0] ? track.album.images[0].url : 'https://via.placeholder.com/60x60?text=No+Art'}" alt="Album Art for ${track.name}" style="max-width:60px; border-radius:6px; float:left; margin-right:12px;" />
+      <h3 style="margin-top:4px;">${track.name}</h3>
+      <p>${track.artists[0].name}</p>
+      <button aria-label="Remove ${track.name} from custom playlist" class="remove-btn" data-idx="${idx}">❌ Remove</button>
+      <div style="clear:both;"></div>
     `;
     section.appendChild(div);
   });
-  // Remove buttons
-  section.querySelectorAll(".remove-custom-btn").forEach(btn => {
-    btn.addEventListener("click", function () {
-      const idx = parseInt(this.getAttribute("data-idx"));
+  section.querySelectorAll(".remove-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-idx"));
       const playlists = getPlaylists();
+      const playlistName = document.getElementById("playlist-select").value;
       playlists[playlistName].custom.splice(idx, 1);
       savePlaylists(playlists);
       showCustomPlaylist();
+      showToast("Removed song!");
     });
   });
 }
 
-// --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
+// --- MOOD-BASED PLAYLIST ---
+async function fetchPlaylistForMood(mood) {
+  showLoading(true);
+  try {
+    const category = moodToCategory[mood.toLowerCase()];
+    if (!category) throw new Error("Unknown mood");
+    const accessToken = await getAccessToken();
+    let url = `https://api.spotify.com/v1/search?q=${encodeURIComponent(category)}&type=playlist&limit=10`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!res.ok) throw new Error("Failed to fetch playlists");
+    const data = await res.json();
+    const playlists = data.playlists.items;
+    if (!playlists.length) throw new Error("No playlists found");
+    const playlistId = playlists[0].id;
+    const tracksRes = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=20`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    if (!tracksRes.ok) throw new Error("Failed to fetch playlist tracks");
+    const tracksData = await tracksRes.json();
+    window.currentSongs = tracksData.items.map(i => i.track);
+    displaySongs(window.currentSongs);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// --- ERROR HANDLING ---
+function showError(msg) {
+  const errorBox = document.getElementById("error");
+  errorBox.textContent = msg;
+  errorBox.style.display = "block";
+  setTimeout(() => { errorBox.style.display = "none"; }, 4000);
+}
+
+// --- LOADING ---
+function showLoading(isLoading) {
+  const loading = document.getElementById("loading");
+  loading.style.display = isLoading ? "block" : "none";
+}
+
+// --- FILTERS ---
+function getFilters() {
+  const genre = document.getElementById("filter-genre").value.trim();
+  const year = document.getElementById("filter-year").value.trim();
+  const popularity = document.getElementById("filter-popularity").value.trim();
+  return { genre, year, popularity };
+}
+
+// --- INIT ---
+document.addEventListener("DOMContentLoaded", () => {
   setupThemeToggle();
-  setupToast();
   setupBackToTop();
   setupSearchBar();
   setupPlaylistManagement();
   setupImportExportShare();
-  window.currentSongs = [];
+
+  // Load saved playlists into select dropdown
   updatePlaylistSelect();
+
+  // Load first playlist if any
   if (document.getElementById("playlist-select").options.length > 0) {
     loadSelectedPlaylist();
   }
-});
 
-// --- Helper and Setup Functions ---
-function showLoading(show = true) {
-  let loader = document.getElementById("loading-indicator");
-  if (!loader) {
-    loader = document.createElement("div");
-    loader.id = "loading-indicator";
-    loader.innerHTML = `<div class="spinner"></div><span style="margin-left:8px;">Loading...</span>`;
-    loader.style.cssText = "display:flex;align-items:center;justify-content:center;margin:20px 0;color:#7c5fe6;";
-    document.getElementById("playlist").parentNode.insertBefore(loader, document.getElementById("playlist"));
-  }
-  loader.style.display = show ? "flex" : "none";
-}
+  // Mood buttons
+  document.querySelectorAll(".mood-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const mood = btn.getAttribute("data-mood");
+      fetchPlaylistForMood(mood);
+    });
+  });
 
-function showError(msg) {
-  showToast(msg);
-}
-
-function getFilters() {
-  return {
-    genre: document.getElementById("genre-filter").value,
-    year: document.getElementById("year-filter").value,
-    popularity: document.getElementById("popularity-filter").value
-  };
-}
-
-// --- GENERATE PLAYLIST BY MOOD ---
-document.getElementById("generate").addEventListener("click", () => {
-  const mood = document.getElementById("mood").value;
-  const query = moodToCategory[mood];
-  fetchSongs(query);
-});
-
-// --- SAVE PLAYLIST (with name/desc) ---
-document.getElementById("save").addEventListener("click", () => {
-  const name = document.getElementById("playlist-name").value.trim();
-  if (!name) return showError("Please enter a playlist name.");
-  const desc = document.getElementById("playlist-desc").value.trim();
-  const playlists = getPlaylists();
-  playlists[name] = {
-    name,
-    desc,
-    songs: window.currentSongs || []
-  };
-  savePlaylists(playlists);
-  updatePlaylistSelect();
-  document.getElementById("playlist-select").value = name;
-  showToast("Playlist saved!");
-});
-
-// --- LOAD PLAYLIST (with name/desc) ---
-document.getElementById("load").addEventListener("click", loadSelectedPlaylist);
-
-// --- CLEAR PLAYLIST ---
-document.getElementById("clear").addEventListener("click", () => {
-  document.getElementById("playlist-name").value = "";
-  document.getElementById("playlist-desc").value = "";
-  window.currentSongs = [];
-  displaySongs([]);
-  showToast("Playlist cleared!");
-});
-
-// --- OPTIONAL: Simple spinner CSS ---
-(function addSpinnerCSS() {
-  const style = document.createElement("style");
-  style.textContent = `
-    body.dark { background: #18142a; color: #e6e6fa; }
-    body.dark .song { background: #221c3a; }
-    .spinner {
-      border: 4px solid #eee;
-      border-top: 4px solid #7c5fe6;
-      border-radius: 50%;
-      width: 22px;
-      height: 22px;
-      animation: spin 1s linear infinite;
-      display:inline-block;
+  // Save playlist info on inputs change
+  document.getElementById("playlist-name").addEventListener("input", () => {
+    const playlists = getPlaylists();
+    const sel = document.getElementById("playlist-select");
+    if (sel.value) {
+      playlists[sel.value].name = document.getElementById("playlist-name").value.trim();
+      savePlaylists(playlists);
+      updatePlaylistSelect();
     }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
-    .song:focus { outline: 2px solid #7c5fe6; }
-  `;
-  document.head.appendChild(style);
-})();
+  });
+  document.getElementById("playlist-desc").addEventListener("input", () => {
+    const playlists = getPlaylists();
+    const sel = document.getElementById("playlist-select");
+    if (sel.value) {
+      playlists[sel.value].desc = document.getElementById("playlist-desc").value.trim();
+      savePlaylists(playlists);
+    }
+  });
+});
