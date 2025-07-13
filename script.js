@@ -65,13 +65,13 @@ function setupThemeToggle() {
   const btn = $("theme-toggle");
   if (!btn) return;
   btn.addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-    const dark = document.body.classList.contains("dark-mode");
+    document.body.classList.toggle("dark");
+    const dark = document.body.classList.contains("dark");
     btn.textContent = dark ? "☀️ Light Mode" : "🌙 Dark Mode";
     localStorage.setItem("theme", dark ? "dark" : "light");
   });
   if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark-mode");
+    document.body.classList.add("dark");
     btn.textContent = "☀️ Light Mode";
   }
 }
