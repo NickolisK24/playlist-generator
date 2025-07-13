@@ -9,6 +9,7 @@ const moodToCategory = {
 
 // --- GLOBAL STATE ---
 let currentSongs = [];
+let customPlaylist = JSON.parse(localStorage.getItem("customPlaylist") || "[]");
 
 // --- DOM HELPERS ---
 const $ = id => document.getElementById(id);
@@ -97,15 +98,12 @@ function updatePlaylistSelect() {
 }
 function loadSelectedPlaylist() {
   const playlists = getPlaylists();
-  const sel = $("playlist-select");
-  const name = sel.value;
+  const name = $("playlist-select").value;
   if (name && playlists[name]) {
+    // No playlist name/desc inputs anymore, so skip those
     currentSongs = playlists[name].songs || [];
     displaySongs(currentSongs);
     showToast(`Loaded playlist "${name}"`);
-  } else {
-    currentSongs = [];
-    displaySongs([]);
   }
 }
 
@@ -119,13 +117,13 @@ function displaySongs(songs) {
     div.innerHTML = `
       <img src="${song.album.images[0]?.url}" width="80" />
       <p><strong>${song.name}</strong> by ${song.artists[0].name}</p>
-      <a href="${song.external_urls.spotify}" target="_blank">Spotify</a>
+      <a href="${song.external_urls.spotify}" target="_blank" rel="noopener noreferrer">Spotify</a>
     `;
     container.appendChild(div);
   });
 }
 
-// --- FETCH SONGS ---
+// --- FETCH SONGS (mood-based) ---
 async function fetchSongs(query) {
   showLoading(true);
   try {
@@ -150,17 +148,35 @@ async function fetchSongs(query) {
   }
 }
 
+// --- FETCH SONGS BY SEARCH ---
+async function fetchSongsBySearch(query) {
+  if (!query || !query.trim()) {
+    showError("Please enter a search term");
+    return;
+  }
+  showLoading(true);
+  try {
+    const token = await getAccessToken();
+    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error("Spotify fetch error");
+    const data = await res.json();
+    currentSongs = data.tracks.items || [];
+    displaySongs(currentSongs);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
 // --- EXPORT/IMPORT ---
 function exportJSON() {
-  const sel = $("playlist-select");
+  const name = $("playlist-select").value || "playlist";
   const playlists = getPlaylists();
-  const name = sel.value;
-  if (!name) return showError("No playlist selected");
-  const playlistData = playlists[name];
-  const desc = playlistData?.desc || "";
-  const songs = playlistData?.songs || [];
-
-  const data = { name, desc, songs };
+  const playlistData = playlists[name] || { songs: currentSongs };
+  const data = { name, songs: playlistData.songs || currentSongs };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -172,24 +188,17 @@ function exportJSON() {
 }
 
 function exportCSV() {
-  const sel = $("playlist-select");
-  const playlists = getPlaylists();
-  const name = sel.value;
-  if (!name) return showError("No playlist selected");
-  const playlistData = playlists[name];
-  const songs = playlistData?.songs || [];
-  if (!songs.length) return showError("No songs to export");
-
+  if (!currentSongs.length) return showError("No songs to export");
+  const name = $("playlist-select").value || "playlist";
   const csv = [
     ["Title", "Artist", "Album", "Spotify URL"].join(","),
-    ...songs.map(s => [
+    ...currentSongs.map(s => [
       `"${s.name.replace(/"/g, '""')}"`,
       `"${s.artists[0].name.replace(/"/g, '""')}"`,
       `"${s.album.name.replace(/"/g, '""')}"`,
       s.external_urls.spotify
     ].join(","))
   ].join("\r\n");
-
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -211,7 +220,8 @@ function importJSON(file) {
       savePlaylists(playlists);
       updatePlaylistSelect();
       $("playlist-select").value = data.name;
-      loadSelectedPlaylist();
+      currentSongs = data.songs;
+      displaySongs(currentSongs);
       showToast("Playlist imported");
     } catch {
       showError("Invalid JSON playlist file");
@@ -220,49 +230,12 @@ function importJSON(file) {
   reader.readAsText(file);
 }
 
+// --- SHARE ---
 function sharePlaylist() {
-  const sel = $("playlist-select");
-  const playlists = getPlaylists();
-  const name = sel.value;
-  if (!name) return showError("No playlist selected");
-  const playlistData = playlists[name];
-  const songs = playlistData?.songs || [];
-  if (!songs.length) return showError("Nothing to share");
-
-  const text = `🎵 ${name}\n\n` + songs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`).join("\n\n");
+  const name = $("playlist-select").value;
+  if (!name || !currentSongs.length) return showError("Nothing to share");
+  const text = `🎵 ${name}\n\n` + currentSongs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`).join("\n\n");
   navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard"), () => showError("Clipboard error"));
-}
-
-// --- NEW PLAYLIST ---
-function createNewPlaylist() {
-  const newName = prompt("Enter new playlist name:");
-  if (!newName) return;
-  const playlists = getPlaylists();
-  if (playlists[newName]) {
-    alert("Playlist name already exists.");
-    return;
-  }
-  playlists[newName] = { name: newName, desc: "", songs: [] };
-  savePlaylists(playlists);
-  updatePlaylistSelect();
-  $("playlist-select").value = newName;
-  loadSelectedPlaylist();
-}
-
-// --- DELETE PLAYLIST ---
-function deletePlaylist() {
-  const sel = $("playlist-select");
-  const name = sel.value;
-  if (!name) {
-    showError("No playlist selected to delete");
-    return;
-  }
-  if (!confirm(`Are you sure you want to delete the playlist "${name}"? This action cannot be undone.`)) return;
-  const playlists = getPlaylists();
-  delete playlists[name];
-  savePlaylists(playlists);
-  updatePlaylistSelect();
-  loadSelectedPlaylist();
 }
 
 // --- INIT ---
@@ -271,45 +244,93 @@ document.addEventListener("DOMContentLoaded", () => {
   updatePlaylistSelect();
   if ($("playlist-select").options.length > 0) loadSelectedPlaylist();
 
+  // Mood-based generate button
   $("generate")?.addEventListener("click", () => {
     const mood = $("mood").value;
     const category = moodToCategory[mood];
     if (category) fetchSongs(category);
   });
 
-  $("save")?.addEventListener("click", () => {
-    const sel = $("playlist-select");
-    const name = sel.value;
-    if (!name) {
-      showError("Please select or create a playlist first.");
-      return;
+  // Search button and enter key listener
+  $("search-btn")?.addEventListener("click", () => {
+    const query = $("search-input").value;
+    fetchSongsBySearch(query);
+  });
+  $("search-input")?.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const query = e.target.value;
+      fetchSongsBySearch(query);
     }
+  });
+
+  // Save playlist
+  $("save")?.addEventListener("click", () => {
     const playlists = getPlaylists();
-    const desc = playlists[name]?.desc || "";
-    playlists[name] = { name, desc, songs: currentSongs };
+    const name = $("playlist-select").value || `Playlist_${Date.now()}`;
+    playlists[name] = { name, songs: currentSongs };
     savePlaylists(playlists);
+    updatePlaylistSelect();
     showToast("Playlist saved!");
   });
 
+  // Load playlist
   $("load")?.addEventListener("click", loadSelectedPlaylist);
 
+  // Clear playlist
   $("clear")?.addEventListener("click", () => {
     currentSongs = [];
     displaySongs([]);
     showToast("Playlist cleared");
   });
 
+  // Export JSON
   $("export-json")?.addEventListener("click", exportJSON);
+
+  // Export CSV
   $("export-csv")?.addEventListener("click", exportCSV);
+
+  // Import JSON
   $("import-json")?.addEventListener("click", () => $("import-file").click());
   $("import-file")?.addEventListener("change", e => {
     if (e.target.files[0]) importJSON(e.target.files[0]);
   });
+
+  // Share playlist
   $("share")?.addEventListener("click", sharePlaylist);
 
-  $("new-playlist")?.addEventListener("click", createNewPlaylist);
-  $("delete-playlist")?.addEventListener("click", deletePlaylist);
+  // New Playlist button - creates a new empty playlist with unique name
+  $("new-playlist")?.addEventListener("click", () => {
+    const playlists = getPlaylists();
+    let baseName = "New Playlist";
+    let i = 1;
+    let newName = baseName;
+    while (playlists[newName]) {
+      newName = `${baseName} ${i++}`;
+    }
+    playlists[newName] = { name: newName, songs: [] };
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    $("playlist-select").value = newName;
+    currentSongs = [];
+    displaySongs([]);
+    showToast(`Created "${newName}"`);
+  });
 
-  // Optional: reload playlist on selection change
-  $("playlist-select")?.addEventListener("change", loadSelectedPlaylist);
+  // Delete Playlist button
+  $("delete-playlist")?.addEventListener("click", () => {
+    const playlists = getPlaylists();
+    const name = $("playlist-select").value;
+    if (!name || !playlists[name]) {
+      showError("No playlist selected to delete");
+      return;
+    }
+    if (!confirm(`Delete playlist "${name}"? This cannot be undone.`)) return;
+    delete playlists[name];
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    currentSongs = [];
+    displaySongs([]);
+    showToast(`Deleted "${name}"`);
+  });
 });
