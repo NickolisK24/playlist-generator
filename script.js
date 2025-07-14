@@ -1,12 +1,3 @@
-// --- CONFIG ---
-const moodToCategory = {
-  chill: "lofi",
-  happy: "pop",
-  energetic: "edm",
-  focus: "ambient",
-  sad: "acoustic"
-};
-
 // --- GLOBAL STATE ---
 let currentSongs = [];
 let customPlaylist = JSON.parse(localStorage.getItem("customPlaylist") || "[]");
@@ -26,15 +17,6 @@ async function getAccessToken() {
     showError("Failed to get access token");
     throw err;
   }
-}
-
-// --- FILTERS ---
-function getFilters() {
-  return {
-    genre: $("genre-filter")?.value.trim() || "",
-    year: $("year-filter")?.value.trim() || "",
-    popularity: $("popularity-filter")?.value.trim() || ""
-  };
 }
 
 // --- LOADING + ERROR DISPLAY ---
@@ -132,13 +114,7 @@ async function fetchSongs(query) {
     });
     if (!res.ok) throw new Error("Spotify fetch error");
     const data = await res.json();
-    const tracks = data.tracks.items;
-    const { genre, year, popularity } = getFilters();
-    let songs = tracks;
-    if (genre) songs = songs.filter(s => (s.genre || '').includes(genre));
-    if (year) songs = songs.filter(s => s.album.release_date.includes(year));
-    if (popularity) songs = songs.filter(s => s.popularity >= parseInt(popularity));
-    currentSongs = songs;
+    currentSongs = data.tracks.items;
     displaySongs(currentSongs);
   } catch (err) {
     showError(err.message);
@@ -216,12 +192,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupThemeToggle();
   updatePlaylistSelect();
   if ($("playlist-select").options.length > 0) loadSelectedPlaylist();
-
-  $("generate")?.addEventListener("click", () => {
-    const mood = $("mood").value;
-    const category = moodToCategory[mood];
-    if (category) fetchSongs(category);
-  });
 
   $("save")?.addEventListener("click", () => {
     const playlists = getPlaylists();

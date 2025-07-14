@@ -10,53 +10,25 @@
   <div class="container">
     <h1>🎵 Music Playlist Generator</h1>
 
-    <!-- Playlist Manager (multi-playlist support) -->
+    <!-- Playlist Manager -->
     <div id="playlist-manager" style="margin-bottom:10px; display:flex; gap:8px; align-items:center;">
       <select id="playlist-select" aria-label="Select playlist"></select>
       <button id="new-playlist">New Playlist</button>
       <button id="delete-playlist">Delete</button>
     </div>
 
+    <!-- Search Field -->
     <div style="margin-bottom: 10px; display:flex; gap:8px; align-items:center;">
-      <input id="search-text" type="text" placeholder="Search for songs or artists..." aria-label="Search songs or artists" style="flex-grow:1; padding:7px 12px; border-radius:6px; border:1px solid #a678e0;" />
-      <button id="generate">Search</button>
+      <input id="search-input" type="text" placeholder="Search for songs or artists..." aria-label="Search songs or artists" style="flex-grow:1; padding:7px 12px; border-radius:6px; border:1px solid #a678e0;" />
+      <button id="search-btn">Search</button>
     </div>
 
-    <!-- Filters -->
-    <div id="filters" style="margin-bottom:10px; display:flex; gap:8px; flex-wrap:wrap;">
-      <select id="genre-filter" aria-label="Filter by genre">
-        <option value="">All Genres</option>
-        <option value="pop">Pop</option>
-        <option value="rock">Rock</option>
-        <option value="hip-hop">Hip-Hop</option>
-        <option value="edm">EDM</option>
-        <option value="acoustic">Acoustic</option>
-        <option value="jazz">Jazz</option>
-        <option value="classical">Classical</option>
-        <option value="ambient">Ambient</option>
-      </select>
-      <input type="number" id="year-filter" placeholder="Year" min="1950" max="2025" style="width:90px;" aria-label="Filter by year" />
-      <select id="popularity-filter" aria-label="Filter by popularity">
-        <option value="">All Popularities</option>
-        <option value="80">Very Popular</option>
-        <option value="60">Popular</option>
-        <option value="40">Less Popular</option>
-      </select>
-    </div>
-
-    <!-- Theme toggle button (injected by JS, but fallback for no-JS) -->
+    <!-- Theme toggle -->
     <button id="theme-toggle" style="margin-bottom:10px;">🌙 Dark Mode</button>
 
-    <label for="mood">Choose a mood:</label>
-    <select id="mood">
-      <option value="chill">Chill</option>
-      <option value="happy">Happy</option>
-      <option value="energetic">Energetic</option>
-      <option value="focus">Focus</option> 
-      <option value="sad">Sad</option>
-    </select>
-
+    <!-- Playlist Actions -->
     <div class="buttons" style="margin:10px 0;">
+      <button id="generate">Generate Playlist</button>
       <button id="save">Save Playlist</button>
       <button id="load">Load Saved Playlist</button>
       <button id="clear">Clear Playlist</button>
@@ -68,21 +40,22 @@
 
     <input type="file" id="import-file" accept=".json" style="display:none;" />
 
-    <!-- Loading indicator added here -->
+    <!-- Loading indicator -->
     <div id="loading" style="display:none; text-align:center; color:#7c5fe6; margin: 10px 0; font-weight:bold;">
       Loading...
     </div>
 
-    <div id="playlist" class="playlist-container">
-      <!-- Song previews will be dynamically inserted here -->
-    </div>
-
+    <!-- Playlist display -->
+    <div id="playlist" class="playlist-container"></div>
     <div id="custom-playlist-section"></div>
 
+    <!-- Back to top button -->
     <button id="back-to-top" aria-label="Back to top" style="display:none;position:fixed;bottom:30px;right:30px;z-index:999;background:#7c5fe6;color:#fff;border:none;border-radius:50%;width:48px;height:48px;font-size:1.5em;box-shadow:0 2px 8px rgba(0,0,0,0.2);cursor:pointer;">↑</button>
 
+    <!-- Toast notification -->
     <div id="toast" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#7c5fe6;color:#fff;padding:12px 24px;border-radius:8px;z-index:1001;font-size:1.1em;box-shadow:0 2px 8px rgba(0,0,0,0.18);"></div>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>
