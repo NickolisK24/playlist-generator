@@ -9,6 +9,7 @@ const moodToCategory = {
 
 // --- GLOBAL STATE ---
 let currentSongs = [];
+let customPlaylist = JSON.parse(localStorage.getItem("customPlaylist") || "[]");
 
 // --- DOM HELPERS ---
 const $ = id => document.getElementById(id);
@@ -30,10 +31,9 @@ async function getAccessToken() {
 // --- FILTERS ---
 function getFilters() {
   return {
-    // genre removed because filtering by genre is unreliable with Spotify track search
+    genre: $("genre-filter")?.value.trim() || "",
     year: $("year-filter")?.value.trim() || "",
-    popularity: $("popularity-filter")?.value.trim() || "",
-    searchText: $("search-text")?.value.trim() || ""
+    popularity: $("popularity-filter")?.value.trim() || ""
   };
 }
 
@@ -66,13 +66,13 @@ function setupThemeToggle() {
   const btn = $("theme-toggle");
   if (!btn) return;
   btn.addEventListener("click", () => {
-    document.body.classList.toggle("dark");
-    const dark = document.body.classList.contains("dark");
+    document.body.classList.toggle("dark-mode");
+    const dark = document.body.classList.contains("dark-mode");
     btn.textContent = dark ? "☀️ Light Mode" : "🌙 Dark Mode";
     localStorage.setItem("theme", dark ? "dark" : "light");
   });
   if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark");
+    document.body.classList.add("dark-mode");
     btn.textContent = "☀️ Light Mode";
   }
 }
@@ -103,8 +103,6 @@ function loadSelectedPlaylist() {
     currentSongs = playlists[name].songs || [];
     displaySongs(currentSongs);
     showToast(`Loaded playlist "${name}"`);
-  } else {
-    showError("No playlist selected or playlist missing");
   }
 }
 
@@ -112,17 +110,13 @@ function loadSelectedPlaylist() {
 function displaySongs(songs) {
   const container = $("playlist");
   container.innerHTML = "";
-  if (songs.length === 0) {
-    container.textContent = "No songs to display.";
-    return;
-  }
   songs.forEach(song => {
     const div = document.createElement("div");
     div.className = "song";
     div.innerHTML = `
-      <img src="${song.album.images[0]?.url}" width="80" alt="Album cover" />
-      <p><strong>${song.name}</strong><br>by ${song.artists.map(a => a.name).join(", ")}</p>
-      <a href="${song.external_urls.spotify}" target="_blank" rel="noopener noreferrer">Spotify</a>
+      <img src="${song.album.images[0]?.url}" width="80" />
+      <p><strong>${song.name}</strong> by ${song.artists[0].name}</p>
+      <a href="${song.external_urls.spotify}" target="_blank">Spotify</a>
     `;
     container.appendChild(div);
   });
@@ -132,51 +126,20 @@ function displaySongs(songs) {
 async function fetchSongs(query) {
   showLoading(true);
   try {
-    if (!query) {
-      showError("Please enter search text or select a mood.");
-      showLoading(false);
-      return;
-    }
     const token = await getAccessToken();
-
-    // Build Spotify search query:
-    // The 'query' param is already passed (either mood category or search text)
-    // Spotify search supports filters in the query string (year, etc.) but to keep things simple,
-    // we'll do year and popularity filtering client-side.
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=50`, {
+    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error("Spotify fetch error");
     const data = await res.json();
     const tracks = data.tracks.items;
-
-    // Apply filters client-side
-    const { year, popularity, searchText } = getFilters();
-
+    const { genre, year, popularity } = getFilters();
     let songs = tracks;
-
-    // Filter by year (album release_date starting with year)
-    if (year) {
-      songs = songs.filter(s => s.album.release_date.startsWith(year));
-    }
-
-    // Filter by popularity (track.popularity >= filter)
-    if (popularity) {
-      songs = songs.filter(s => s.popularity >= parseInt(popularity));
-    }
-
-    // Filter by searchText (case-insensitive match in track name or artist names)
-    if (searchText) {
-      const lowerSearch = searchText.toLowerCase();
-      songs = songs.filter(s => 
-        s.name.toLowerCase().includes(lowerSearch) ||
-        s.artists.some(artist => artist.name.toLowerCase().includes(lowerSearch))
-      );
-    }
-
+    if (genre) songs = songs.filter(s => (s.genre || '').includes(genre));
+    if (year) songs = songs.filter(s => s.album.release_date.includes(year));
+    if (popularity) songs = songs.filter(s => s.popularity >= parseInt(popularity));
     currentSongs = songs;
     displaySongs(currentSongs);
-    if (songs.length === 0) showToast("No songs matched the filters.");
   } catch (err) {
     showError(err.message);
   } finally {
@@ -186,8 +149,7 @@ async function fetchSongs(query) {
 
 // --- EXPORT/IMPORT ---
 function exportJSON() {
-  if (!currentSongs.length) return showError("No songs to export");
-  const name = $("playlist-select")?.value || "playlist";
+  const name = $("playlist-select").value.trim() || "playlist";
   const data = { name, songs: currentSongs };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -201,12 +163,12 @@ function exportJSON() {
 
 function exportCSV() {
   if (!currentSongs.length) return showError("No songs to export");
-  const name = $("playlist-select")?.value || "playlist";
+  const name = $("playlist-select").value.trim() || "playlist";
   const csv = [
     ["Title", "Artist", "Album", "Spotify URL"].join(","),
     ...currentSongs.map(s => [
       `"${s.name.replace(/"/g, '""')}"`,
-      `"${s.artists.map(a => a.name).join(", ").replace(/"/g, '""')}"`,
+      `"${s.artists[0].name.replace(/"/g, '""')}"`,
       `"${s.album.name.replace(/"/g, '""')}"`,
       s.external_urls.spotify
     ].join(","))
@@ -232,7 +194,8 @@ function importJSON(file) {
       savePlaylists(playlists);
       updatePlaylistSelect();
       $("playlist-select").value = data.name;
-      loadSelectedPlaylist();
+      currentSongs = data.songs;
+      displaySongs(currentSongs);
       showToast("Playlist imported");
     } catch {
       showError("Invalid JSON playlist file");
@@ -241,50 +204,11 @@ function importJSON(file) {
   reader.readAsText(file);
 }
 
-// --- PLAYLIST MANAGEMENT ---
-function createNewPlaylist() {
-  const playlists = getPlaylists();
-  // Create a default unique playlist name
-  let baseName = "New Playlist";
-  let newName = baseName;
-  let counter = 1;
-  while (playlists[newName]) {
-    newName = `${baseName} ${counter++}`;
-  }
-  playlists[newName] = { name: newName, songs: [] };
-  savePlaylists(playlists);
-  updatePlaylistSelect();
-  $("playlist-select").value = newName;
-  currentSongs = [];
-  displaySongs([]);
-  showToast(`Created playlist "${newName}"`);
-}
-
-function deleteSelectedPlaylist() {
-  const playlists = getPlaylists();
-  const sel = $("playlist-select");
-  const name = sel.value;
-  if (!name || !playlists[name]) {
-    showError("No playlist selected");
-    return;
-  }
-  if (!confirm(`Are you sure you want to delete the playlist "${name}"? This cannot be undone.`)) {
-    return;
-  }
-  delete playlists[name];
-  savePlaylists(playlists);
-  updatePlaylistSelect();
-  currentSongs = [];
-  displaySongs([]);
-  showToast(`Deleted playlist "${name}"`);
-}
-
-// --- SHARE PLAYLIST ---
 function sharePlaylist() {
-  const name = $("playlist-select")?.value;
+  const name = $("playlist-select").value.trim();
   if (!name || !currentSongs.length) return showError("Nothing to share");
-  const text = `🎵 Playlist: ${name}\n\n` + currentSongs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists.map(a => a.name).join(", ")}\n${s.external_urls.spotify}`).join("\n\n");
-  navigator.clipboard.writeText(text).then(() => showToast("Copied playlist to clipboard"), () => showError("Clipboard error"));
+  const text = `🎵 ${name}\n\n` + currentSongs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`).join("\n\n");
+  navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard"), () => showError("Clipboard error"));
 }
 
 // --- INIT ---
@@ -293,32 +217,19 @@ document.addEventListener("DOMContentLoaded", () => {
   updatePlaylistSelect();
   if ($("playlist-select").options.length > 0) loadSelectedPlaylist();
 
-  // New playlist and delete playlist buttons
-  $("new-playlist")?.addEventListener("click", createNewPlaylist);
-  $("delete-playlist")?.addEventListener("click", deleteSelectedPlaylist);
-
-  // Generate playlist from mood or search text
   $("generate")?.addEventListener("click", () => {
-    const mood = $("mood")?.value;
+    const mood = $("mood").value;
     const category = moodToCategory[mood];
-    const searchText = $("search-text")?.value.trim();
-    if (searchText) {
-      fetchSongs(searchText);
-    } else if (category) {
-      fetchSongs(category);
-    } else {
-      showError("Please select a mood or enter search text");
-    }
+    if (category) fetchSongs(category);
   });
 
-  // Save/load/clear/export/import/share
   $("save")?.addEventListener("click", () => {
     const playlists = getPlaylists();
-    const sel = $("playlist-select");
-    if (!sel.value) return showError("No playlist selected");
-    const name = sel.value;
+    const name = prompt("Save playlist as:", "Untitled");
+    if (!name) return;
     playlists[name] = { name, songs: currentSongs };
     savePlaylists(playlists);
+    updatePlaylistSelect();
     showToast("Playlist saved!");
   });
 
@@ -337,4 +248,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.files[0]) importJSON(e.target.files[0]);
   });
   $("share")?.addEventListener("click", sharePlaylist);
+
+  // --- NEW + DELETE PLAYLIST BUTTONS ---
+  $("new-playlist")?.addEventListener("click", () => {
+    const name = prompt("Enter new playlist name:").trim();
+    if (!name) return;
+    const playlists = getPlaylists();
+    if (playlists[name]) return showError("Playlist already exists");
+    playlists[name] = { name, songs: [] };
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    $("playlist-select").value = name;
+    currentSongs = [];
+    displaySongs([]);
+    showToast("New playlist created");
+  });
+
+  $("delete-playlist")?.addEventListener("click", () => {
+    const sel = $("playlist-select");
+    const name = sel.value;
+    if (!name) return;
+    if (!confirm(`Delete playlist "${name}"?`)) return;
+    const playlists = getPlaylists();
+    delete playlists[name];
+    savePlaylists(playlists);
+    updatePlaylistSelect();
+    if ($("playlist-select").options.length > 0) {
+      loadSelectedPlaylist();
+    } else {
+      currentSongs = [];
+      displaySongs([]);
+    }
+    showToast("Playlist deleted");
+  });
+
+  // --- Search field ---
+  $("search-btn")?.addEventListener("click", () => {
+    const query = $("search-input").value.trim();
+    if (query) fetchSongs(query);
+  });
 });

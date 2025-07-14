@@ -13,11 +13,14 @@ body {
 
 .container {
   max-width: 900px;
-  margin: 30px auto 30px auto;
-  background: #fff;
+  margin: 30px auto;
+  padding: 32px 18px;
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 18px;
-  box-shadow: 0 10px 40px rgba(118, 75, 162, 0.12);
-  padding: 32px 18px 32px 18px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 h1 {
@@ -85,11 +88,14 @@ button:hover, #search-btn:hover {
 }
 
 .song {
-  background-color: #292929;
+  background: rgba(124, 95, 230, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
   padding: 15px;
   border-radius: 10px;
   width: 190px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
   text-align: center;
   transition: transform 0.2s ease;
   color: #fff;
@@ -110,7 +116,7 @@ button:hover, #search-btn:hover {
   font-size: 1.1rem;
   margin: 0 0 6px 0;
   color: #d6caff;
-} 
+}
 
 .song p {
   font-size: 0.95rem;
@@ -154,25 +160,22 @@ button:hover, #search-btn:hover {
   margin-top: 30px;
   box-shadow: 0 2px 12px rgba(118, 75, 162, 0.08);
 }
+
 #custom-playlist-section h2 {
   color: #7c5fe6;
   margin-bottom: 10px;
 }
+
 #custom-playlist-section .song {
   background: #ede7fa;
   color: #292929;
 }
+
 .remove-custom-btn {
   background: #e74c3c;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 10px;
   margin-left: 10px;
-  cursor: pointer;
-  font-size: 1em;
-  transition: background 0.2s;
 }
+
 .remove-custom-btn:hover {
   background: #c0392b;
 }
@@ -190,13 +193,7 @@ button:hover, #search-btn:hover {
   outline: none;
   transition: border 0.2s;
 }
-body.dark #playlist-name, 
-body.dark #playlist-desc, 
-body.dark #search {
-  background: #2a2342;
-  color: #e6e6fa;
-  border: 1px solid #7c5fe6;
-}
+
 #search-btn {
   padding: 8px 16px;
   font-size: 1.1rem;
@@ -208,6 +205,7 @@ body.dark #search {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 #search-btn:hover {
   background: #a678e0;
 }
@@ -218,7 +216,7 @@ button:focus, input:focus, select:focus, .song:focus {
   outline-offset: 2px;
 }
 
-/* Spinner for loading indicator */
+/* Spinner */
 .spinner {
   border: 4px solid #eee;
   border-top: 4px solid #7c5fe6;
@@ -262,7 +260,7 @@ button:focus, input:focus, select:focus, .song:focus {
   display: block;
 }
 
-/* Responsive design */
+/* Responsive */
 @media (max-width: 700px) {
   .playlist-container {
     flex-direction: column;
@@ -282,42 +280,59 @@ body.dark {
   background: #18142a;
   color: #e6e6fa;
 }
+
 body.dark .container {
-  background-color: #221c3a;
-  box-shadow: 0 20px 60px rgba(60, 40, 90, 0.8);
+  background: rgba(34, 28, 58, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
+
 body.dark .song {
-  background-color: #2a2342;
+  background: rgba(42, 35, 66, 0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #e6e6fa;
 }
+
 body.dark .song h3 {
   color: #e0d7ff;
 }
+
 body.dark .song p {
   color: #b0a1d4;
 }
+
 body.dark .song a {
   color: #bfa6ff;
 }
+
 body.dark .song a:hover {
   color: #e0d7ff;
 }
+
 body.dark input, body.dark select {
   background: #2a2342;
   color: #e6e6fa;
   border: 1px solid #7c5fe6;
 }
+
 body.dark button, body.dark #back-to-top {
   background: #7c5fe6;
   color: #fff;
 }
+
 body.dark button:hover, body.dark #back-to-top:hover {
   background: #a678e0;
 }
+
 body.dark #custom-playlist-section {
   background: #221c3a;
   box-shadow: 0 2px 12px rgba(60, 40, 90, 0.18);
 }
+
 body.dark #custom-playlist-section .song {
   background: #2a2342;
   color: #e6e6fa;
