@@ -110,7 +110,8 @@ async function fetchRandomPopularSongs() {
   try {
     const token = await getAccessToken();
     // Spotify's Today's Top Hits playlist ID: 37i9dQZF1DXcBWIGoYBM5M
-    const res = await fetch("https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M/tracks?limit=50", {
+    const res = await fetch("https://api.spotify.com/v1/playlists/37i9dQZEVXbMDoHDwVN2tF/tracks?limit=50&market=US"
+, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) throw new Error("Failed to fetch popular tracks");
