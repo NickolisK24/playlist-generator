@@ -1,0 +1,25 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment variables and secrets
+.env
+spotify-backend/.env
+
+# OS/Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# Build output (if any)
+dist/
+build/
+out/
+
+# Log files
+*.log
+
+# Local data
+*.local
