@@ -104,17 +104,21 @@ function displaySongs(songs) {
   });
 }
 
-// --- FETCH SONGS ---
-async function fetchSongs(query) {
+// --- FETCH RANDOM POPULAR SONGS ---
+async function fetchRandomPopularSongs() {
   showLoading(true);
   try {
     const token = await getAccessToken();
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
+    // Spotify's Today's Top Hits playlist ID: 37i9dQZF1DXcBWIGoYBM5M
+    const res = await fetch("https://api.spotify.com/v1/playlists/37i9dQZF1DXcBWIGoYBM5M/tracks?limit=50", {
       headers: { Authorization: `Bearer ${token}` }
     });
-    if (!res.ok) throw new Error("Spotify fetch error");
+    if (!res.ok) throw new Error("Failed to fetch popular tracks");
     const data = await res.json();
-    currentSongs = data.tracks.items;
+    const tracks = data.items.map(item => item.track).filter(Boolean);
+    // Pick 10 random songs
+    const shuffled = tracks.sort(() => 0.5 - Math.random());
+    currentSongs = shuffled.slice(0, 10);
     displaySongs(currentSongs);
   } catch (err) {
     showError(err.message);
@@ -256,5 +260,10 @@ document.addEventListener("DOMContentLoaded", () => {
   $("search-btn")?.addEventListener("click", () => {
     const query = $("search-input").value.trim();
     if (query) fetchSongs(query);
+  });
+
+  // --- Generate Playlist ---
+  $("generate")?.addEventListener("click", () => {
+    fetchRandomPopularSongs();
   });
 });
