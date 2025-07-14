@@ -104,43 +104,18 @@ function displaySongs(songs) {
   });
 }
 
-// --- FETCH RANDOM POPULAR SONGS ---
-async function fetchRandomPopularSongs(count = 20) {
+// --- FETCH SONGS ---
+async function fetchSongs(query) {
   showLoading(true);
   try {
     const token = await getAccessToken();
-
-    const searchQuery = 'top hits'; // Broad popular search term
-
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(searchQuery)}&type=track&limit=50`, {
+    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
       headers: { Authorization: `Bearer ${token}` }
     });
-
-    if (!res.ok) throw new Error(`Spotify search error: ${res.status}`);
-
+    if (!res.ok) throw new Error("Spotify fetch error");
     const data = await res.json();
-
-    let tracks = data.tracks.items;
-
-    // Sort descending by popularity
-    tracks.sort((a, b) => b.popularity - a.popularity);
-
-    // Pick random unique songs up to requested count
-    const selected = [];
-    const usedIndexes = new Set();
-
-    while (selected.length < count && usedIndexes.size < tracks.length) {
-      const idx = Math.floor(Math.random() * tracks.length);
-      if (!usedIndexes.has(idx)) {
-        usedIndexes.add(idx);
-        selected.push(tracks[idx]);
-      }
-    }
-
-    currentSongs = selected;
+    currentSongs = data.tracks.items;
     displaySongs(currentSongs);
-    showToast(`Generated ${currentSongs.length} popular songs`);
-
   } catch (err) {
     showError(err.message);
   } finally {
@@ -209,7 +184,9 @@ function sharePlaylist() {
   const name = $("playlist-select").value.trim();
   if (!name || !currentSongs.length) return showError("Nothing to share");
   const text = `🎵 ${name}\n\n` + currentSongs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`).join("\n\n");
-  navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard"), () => showError("Clipboard error"));
+  navigator.clipboard.writeText(text)
+    .then(() => alert("Playlist copied to clipboard!"))
+    .catch(() => showError("Clipboard error"));
 }
 
 // --- INIT ---
@@ -282,28 +259,4 @@ document.addEventListener("DOMContentLoaded", () => {
     const query = $("search-input").value.trim();
     if (query) fetchSongs(query);
   });
-
-  // --- Generate popular songs button ---
-  $("generate")?.addEventListener("click", () => {
-    fetchRandomPopularSongs(20);
-  });
 });
-
-// --- SEARCH SONGS ---
-async function fetchSongs(query) {
-  showLoading(true);
-  try {
-    const token = await getAccessToken();
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error("Spotify fetch error");
-    const data = await res.json();
-    currentSongs = data.tracks.items;
-    displaySongs(currentSongs);
-  } catch (err) {
-    showError(err.message);
-  } finally {
-    showLoading(false);
-  }
-}
