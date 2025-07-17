@@ -51,7 +51,7 @@ function displaySongs(songs) {
 }
 
 async function getAccessToken() {
-  const res = await fetch("http://localhost:5000/token");
+  const res = await fetch("https://spotify-token-server-xoem.onrender.com/token");
   const data = await res.json();
   return data.access_token;
 }
