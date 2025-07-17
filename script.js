@@ -48,13 +48,13 @@ function setupThemeToggle() {
   const btn = $("theme-toggle");
   if (!btn) return;
   btn.addEventListener("click", () => {
-    document.body.classList.toggle("dark");
-    const dark = document.body.classList.contains("dark");
+    document.body.classList.toggle("dark-mode");
+    const dark = document.body.classList.contains("dark-mode");
     btn.textContent = dark ? "☀️ Light Mode" : "🌙 Dark Mode";
     localStorage.setItem("theme", dark ? "dark" : "light");
   });
   if (localStorage.getItem("theme") === "dark") {
-    document.body.classList.add("dark");
+    document.body.classList.add("dark-mode");
     btn.textContent = "☀️ Light Mode";
   }
 }
@@ -123,6 +123,34 @@ async function fetchSongs(query) {
   }
 }
 
+// --- GENERATE RANDOM POPULAR SONGS ---
+async function generatePopularSongs() {
+  showLoading(true);
+  try {
+    const token = await getAccessToken();
+    const queries = ["pop", "rock", "rap", "dance", "indie", "chill", "party", "trending"];
+    const results = [];
+
+    for (let i = 0; i < 5; i++) {
+      const query = queries[Math.floor(Math.random() * queries.length)];
+      const res = await fetch(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=5`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      results.push(...data.tracks.items);
+    }
+
+    currentSongs = results.slice(0, 20);
+    displaySongs(currentSongs);
+    showToast("Popular songs generated!");
+  } catch (err) {
+    showError("Could not generate playlist");
+  } finally {
+    showLoading(false);
+  }
+}
+
 // --- EXPORT/IMPORT ---
 function exportJSON() {
   const name = $("playlist-select").value.trim() || "playlist";
@@ -184,9 +212,7 @@ function sharePlaylist() {
   const name = $("playlist-select").value.trim();
   if (!name || !currentSongs.length) return showError("Nothing to share");
   const text = `🎵 ${name}\n\n` + currentSongs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`).join("\n\n");
-  navigator.clipboard.writeText(text)
-    .then(() => alert("Playlist copied to clipboard!"))
-    .catch(() => showError("Clipboard error"));
+  navigator.clipboard.writeText(text).then(() => showToast("Copied to clipboard"), () => showError("Clipboard error"));
 }
 
 // --- INIT ---
@@ -219,9 +245,15 @@ document.addEventListener("DOMContentLoaded", () => {
   $("import-file")?.addEventListener("change", e => {
     if (e.target.files[0]) importJSON(e.target.files[0]);
   });
-  $("share")?.addEventListener("click", sharePlaylist);
 
-  // --- NEW + DELETE PLAYLIST BUTTONS ---
+  $("share")?.addEventListener("click", sharePlaylist);
+  $("search-btn")?.addEventListener("click", () => {
+    const query = $("search-input").value.trim();
+    if (query) fetchSongs(query);
+  });
+
+  $("generate-playlist")?.addEventListener("click", generatePopularSongs);
+
   $("new-playlist")?.addEventListener("click", () => {
     const name = prompt("Enter new playlist name:").trim();
     if (!name) return;
@@ -252,11 +284,5 @@ document.addEventListener("DOMContentLoaded", () => {
       displaySongs([]);
     }
     showToast("Playlist deleted");
-  });
-
-  // --- Search field ---
-  $("search-btn")?.addEventListener("click", () => {
-    const query = $("search-input").value.trim();
-    if (query) fetchSongs(query);
   });
 });
