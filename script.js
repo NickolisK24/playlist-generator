@@ -29,10 +29,11 @@ function showError(msg) {
   const el = $("toast") || document.createElement("div");
   el.id = "toast";
   el.textContent = msg;
-  el.style = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#e44;color:#fff;padding:10px 20px;border-radius:8px;z-index:999;";
+  el.style =
+    "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#e44;color:#fff;padding:10px 20px;border-radius:8px;z-index:999;";
   document.body.appendChild(el);
   el.style.display = "block";
-  setTimeout(() => el.style.display = "none", 4000);
+  setTimeout(() => (el.style.display = "none"), 4000);
 }
 
 function showToast(msg) {
@@ -40,7 +41,7 @@ function showToast(msg) {
   if (!el) return;
   el.textContent = msg;
   el.style.display = "block";
-  setTimeout(() => el.style.display = "none", 3000);
+  setTimeout(() => (el.style.display = "none"), 3000);
 }
 
 // --- THEME TOGGLE ---
@@ -109,9 +110,12 @@ async function fetchSongs(query) {
   showLoading(true);
   try {
     const token = await getAccessToken();
-    const res = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=10`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
     if (!res.ok) throw new Error("Spotify fetch error");
     const data = await res.json();
     currentSongs = data.tracks.items;
@@ -123,24 +127,36 @@ async function fetchSongs(query) {
   }
 }
 
-async function generatePlaylistFromMood() {
-  const mood = $("mood-select").value;
-  if (!mood) return showError("Select a mood first");
-  const queries = {
-    happy: "happy upbeat",
-    sad: "sad emotional",
-    energetic: "workout energetic",
-    chill: "chill relax",
-    romantic: "love romantic"
-  };
-  fetchSongs(queries[mood] || mood);
+// --- GENERATE PLAYLIST BY MOOD ---
+async function generatePlaylistFromMood(mood) {
+  showLoading(true);
+  try {
+    const token = await getAccessToken();
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+        mood
+      )}&type=track&limit=20`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!res.ok) throw new Error("Spotify fetch error");
+    const data = await res.json();
+    currentSongs = data.tracks.items;
+    displaySongs(currentSongs);
+    showToast(`Playlist generated for mood: ${mood}`);
+  } catch (err) {
+    showError("Could not generate playlist");
+  } finally {
+    showLoading(false);
+  }
 }
 
 // --- EXPORT/IMPORT ---
 function exportJSON() {
   const name = $("playlist-select").value.trim() || "playlist";
   const data = { name, songs: currentSongs };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -155,12 +171,14 @@ function exportCSV() {
   const name = $("playlist-select").value.trim() || "playlist";
   const csv = [
     ["Title", "Artist", "Album", "Spotify URL"].join(","),
-    ...currentSongs.map(s => [
-      `"${s.name.replace(/"/g, '""')}"`,
-      `"${s.artists[0].name.replace(/"/g, '""')}"`,
-      `"${s.album.name.replace(/"/g, '""')}"`,
-      s.external_urls.spotify
-    ].join(","))
+    ...currentSongs.map((s) =>
+      [
+        `"${s.name.replace(/"/g, '""')}"`,
+        `"${s.artists[0].name.replace(/"/g, '""')}"`,
+        `"${s.album.name.replace(/"/g, '""')}"`,
+        s.external_urls.spotify,
+      ].join(",")
+    ),
   ].join("\r\n");
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -174,7 +192,7 @@ function exportCSV() {
 
 function importJSON(file) {
   const reader = new FileReader();
-  reader.onload = e => {
+  reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (!data.name || !Array.isArray(data.songs)) throw new Error("Invalid file");
@@ -196,9 +214,17 @@ function importJSON(file) {
 function sharePlaylist() {
   const name = $("playlist-select").value.trim();
   if (!name || !currentSongs.length) return showError("Nothing to share");
-  const text = `🎵 ${name}\n\n` + currentSongs.map((s, i) => `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`).join("\n\n");
-  navigator.clipboard.writeText(text)
-    .then(() => alert("Playlist copied to clipboard!"))
+  const text =
+    `🎵 ${name}\n\n` +
+    currentSongs
+      .map(
+        (s, i) =>
+          `${i + 1}. ${s.name} - ${s.artists[0].name}\n${s.external_urls.spotify}`
+      )
+      .join("\n\n");
+  navigator.clipboard
+    .writeText(text)
+    .then(() => showToast("Copied to clipboard"))
     .catch(() => showError("Clipboard error"));
 }
 
@@ -208,25 +234,14 @@ document.addEventListener("DOMContentLoaded", () => {
   updatePlaylistSelect();
   if ($("playlist-select").options.length > 0) loadSelectedPlaylist();
 
-  const moodContainer = document.createElement("div");
-  moodContainer.innerHTML = `
-    <label for="mood-select">Choose a mood: </label>
-    <select id="mood-select">
-      <option value="">--Select Mood--</option>
-      <option value="happy">Happy</option>
-      <option value="sad">Sad</option>
-      <option value="energetic">Energetic</option>
-      <option value="chill">Chill</option>
-      <option value="romantic">Romantic</option>
-    </select>
-    <button id="generate-mood">Generate Playlist</button>
-  `;
-  
-  const playlist = $("playlist");
-  playlist.parentNode.insertBefore(moodContainer, playlist);
+  // Generate playlist by mood button
+  $("generate")?.addEventListener("click", () => {
+    const mood = $("mood-select").value;
+    if (!mood) return showError("Please select a mood before generating.");
+    generatePlaylistFromMood(mood);
+  });
 
-  $("generate-mood")?.addEventListener("click", generatePlaylistFromMood);
-
+  // Save playlist
   $("save")?.addEventListener("click", () => {
     const playlists = getPlaylists();
     const name = prompt("Save playlist as:", "Untitled");
@@ -237,22 +252,26 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Playlist saved!");
   });
 
+  // Load playlist
   $("load")?.addEventListener("click", loadSelectedPlaylist);
 
+  // Clear playlist
   $("clear")?.addEventListener("click", () => {
     currentSongs = [];
     displaySongs([]);
     showToast("Playlist cleared");
   });
 
+  // Export/import/share
   $("export-json")?.addEventListener("click", exportJSON);
   $("export-csv")?.addEventListener("click", exportCSV);
   $("import-json")?.addEventListener("click", () => $("import-file").click());
-  $("import-file")?.addEventListener("change", e => {
+  $("import-file")?.addEventListener("change", (e) => {
     if (e.target.files[0]) importJSON(e.target.files[0]);
   });
   $("share")?.addEventListener("click", sharePlaylist);
 
+  // New playlist
   $("new-playlist")?.addEventListener("click", () => {
     const name = prompt("Enter new playlist name:").trim();
     if (!name) return;
@@ -267,6 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("New playlist created");
   });
 
+  // Delete playlist
   $("delete-playlist")?.addEventListener("click", () => {
     const sel = $("playlist-select");
     const name = sel.value;
@@ -285,6 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Playlist deleted");
   });
 
+  // Search songs
   $("search-btn")?.addEventListener("click", () => {
     const query = $("search-input").value.trim();
     if (query) fetchSongs(query);
