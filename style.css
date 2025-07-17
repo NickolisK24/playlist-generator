@@ -48,6 +48,7 @@ select, input[type="number"] {
   color: #292929;
   outline: none;
   transition: border 0.2s;
+  cursor: pointer;
 }
 
 input[type="text"], input[type="number"] {
@@ -72,7 +73,7 @@ button {
   color: #fff;
   border: none;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.3s ease;
 }
 
 button:hover, #search-btn:hover {
@@ -206,10 +207,6 @@ button:hover, #search-btn:hover {
   transition: background 0.2s;
 }
 
-#search-btn:hover {
-  background: #a678e0;
-}
-
 /* Focus styles for accessibility */
 button:focus, input:focus, select:focus, .song:focus {
   outline: 2px solid #7c5fe6;
@@ -336,4 +333,79 @@ body.dark #custom-playlist-section {
 body.dark #custom-playlist-section .song {
   background: #2a2342;
   color: #e6e6fa;
+}
+
+/* Added improvements for buttons and responsiveness */
+
+/* Button container wrapping */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-start;
+  padding-bottom: 12px;
+}
+
+.buttons button {
+  flex-shrink: 0;
+  min-width: 120px;
+}
+
+/* Playlist manager responsive */
+#playlist-manager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+#playlist-manager select {
+  flex-grow: 1;
+  min-width: 160px;
+  max-width: 300px;
+}
+
+/* Search bar responsiveness */
+#search-input {
+  flex-grow: 1;
+  min-width: 200px;
+}
+
+#search-btn {
+  flex-shrink: 0;
+  min-width: 100px;
+}
+
+/* Small screen responsive stacking */
+@media (max-width: 480px) {
+  .buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .buttons button {
+    min-width: auto;
+    width: 100%;
+  }
+
+  #playlist-manager {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #playlist-manager select,
+  #playlist-manager button {
+    width: 100%;
+    min-width: auto;
+  }
+
+  #search-input {
+    width: 100%;
+  }
+
+  #search-btn {
+    width: 100%;
+    margin-top: 6px;
+  }
 }
