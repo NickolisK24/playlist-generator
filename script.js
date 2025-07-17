@@ -310,4 +310,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const query = $("search-input").value.trim();
     if (query) fetchSongs(query);
   });
+
+  // --- Back to Top button functionality ---
+  const backToTopBtn = $("back-to-top");
+  if (backToTopBtn) {
+    window.addEventListener("scroll", () => {
+      if (window.scrollY > 200) {
+        backToTopBtn.classList.add("show");
+      } else {
+        backToTopBtn.classList.remove("show");
+      }
+    });
+    backToTopBtn.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  }
 });
+

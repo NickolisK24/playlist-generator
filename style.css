@@ -207,6 +207,21 @@ button:hover, #search-btn:hover {
   transition: background 0.2s;
 }
 
+#footer {
+  text-align: center;
+  color: #7c5fe6;
+  font-size: 0.9rem;
+  margin-top: 40px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(124, 95, 230, 0.3);
+  user-select: none;
+}
+
+body.dark #footer {
+  color: #a678e0;
+  border-top-color: rgba(166, 120, 224, 0.3);
+}
+
 /* Focus styles for accessibility */
 button:focus, input:focus, select:focus, .song:focus {
   outline: 2px solid #7c5fe6;
