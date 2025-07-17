@@ -124,37 +124,30 @@ async function fetchSongs(query) {
 }
 
 // --- GENERATE RANDOM POPULAR SONGS ---
-async function generatePopularSongs() {
-  console.log("🔁 Generating popular songs...");
+async function generateMoodPlaylist() {
   showLoading(true);
   try {
     const token = await getAccessToken();
-    console.log("✅ Token fetched:", token.substring(0, 10) + "…");
-
-    const query = "top hits";
-    console.log("🔎 Searching for:", query);
+    const mood = $("mood-select").value || "happy";
 
     const res = await fetch(
-      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(mood)}&type=track&limit=20`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    console.log("📥 Fetch response:", res.status, res.statusText);
-    if (!res.ok) throw new Error("Spotify search error: " + res.status);
+
+    if (!res.ok) throw new Error("Spotify fetch error");
 
     const data = await res.json();
-    console.log("📊 Tracks fetched:", data.tracks.items.length);
-
-    currentSongs = data.tracks.items.slice(0, 10);
+    currentSongs = data.tracks.items;
     displaySongs(currentSongs);
-    showToast(`Generated ${currentSongs.length} songs`);
-
+    showToast(`Playlist generated for mood: ${mood}`);
   } catch (err) {
-    console.error("❗generate error:", err);
-    showError("Could not generate playlist: " + err.message);
+    showError("Could not generate playlist");
   } finally {
     showLoading(false);
   }
 }
+
 
 
 
@@ -259,7 +252,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (query) fetchSongs(query);
   });
 
-  $("generate-playlist")?.addEventListener("click", generatePopularSongs);
+  $("generate-playlist")?.addEventListener("click", generateMoodPlaylist);
 
   $("new-playlist")?.addEventListener("click", () => {
     const name = prompt("Enter new playlist name:").trim();
