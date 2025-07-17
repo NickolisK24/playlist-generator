@@ -123,6 +123,19 @@ async function fetchSongs(query) {
   }
 }
 
+async function generatePlaylistFromMood() {
+  const mood = $("mood-select").value;
+  if (!mood) return showError("Select a mood first");
+  const queries = {
+    happy: "happy upbeat",
+    sad: "sad emotional",
+    energetic: "workout energetic",
+    chill: "chill relax",
+    romantic: "love romantic"
+  };
+  fetchSongs(queries[mood] || mood);
+}
+
 // --- EXPORT/IMPORT ---
 function exportJSON() {
   const name = $("playlist-select").value.trim() || "playlist";
@@ -195,6 +208,23 @@ document.addEventListener("DOMContentLoaded", () => {
   updatePlaylistSelect();
   if ($("playlist-select").options.length > 0) loadSelectedPlaylist();
 
+  const moodContainer = document.createElement("div");
+  moodContainer.innerHTML = `
+    <label for="mood-select">Choose a mood: </label>
+    <select id="mood-select">
+      <option value="">--Select Mood--</option>
+      <option value="happy">Happy</option>
+      <option value="sad">Sad</option>
+      <option value="energetic">Energetic</option>
+      <option value="chill">Chill</option>
+      <option value="romantic">Romantic</option>
+    </select>
+    <button id="generate-mood">Generate Playlist</button>
+  `;
+  document.body.insertBefore(moodContainer, $("playlist"));
+
+  $("generate-mood")?.addEventListener("click", generatePlaylistFromMood);
+
   $("save")?.addEventListener("click", () => {
     const playlists = getPlaylists();
     const name = prompt("Save playlist as:", "Untitled");
@@ -221,7 +251,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   $("share")?.addEventListener("click", sharePlaylist);
 
-  // --- NEW + DELETE PLAYLIST BUTTONS ---
   $("new-playlist")?.addEventListener("click", () => {
     const name = prompt("Enter new playlist name:").trim();
     if (!name) return;
@@ -254,7 +283,6 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Playlist deleted");
   });
 
-  // --- Search field ---
   $("search-btn")?.addEventListener("click", () => {
     const query = $("search-input").value.trim();
     if (query) fetchSongs(query);
