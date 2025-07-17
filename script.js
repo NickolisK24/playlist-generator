@@ -125,31 +125,38 @@ async function fetchSongs(query) {
 
 // --- GENERATE RANDOM POPULAR SONGS ---
 async function generatePopularSongs() {
+  console.log("🔁 Generating popular songs...");
   showLoading(true);
   try {
     const token = await getAccessToken();
-    const queries = ["pop", "rock", "rap", "dance", "indie", "chill", "party", "trending"];
-    const results = [];
+    console.log("✅ Token fetched:", token.substring(0, 10) + "…");
 
-    for (let i = 0; i < 5; i++) {
-      const query = queries[Math.floor(Math.random() * queries.length)];
-      const res = await fetch(`https://api.spotify.com/v1/search?q=${query}&type=track&limit=5`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      results.push(...data.tracks.items);
-    }
+    const query = "top hits";
+    console.log("🔎 Searching for:", query);
 
-    currentSongs = results.slice(0, 20);
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=20`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    console.log("📥 Fetch response:", res.status, res.statusText);
+    if (!res.ok) throw new Error("Spotify search error: " + res.status);
+
+    const data = await res.json();
+    console.log("📊 Tracks fetched:", data.tracks.items.length);
+
+    currentSongs = data.tracks.items.slice(0, 10);
     displaySongs(currentSongs);
-    showToast("Popular songs generated!");
+    showToast(`Generated ${currentSongs.length} songs`);
+
   } catch (err) {
-    showError("Could not generate playlist");
+    console.error("❗generate error:", err);
+    showError("Could not generate playlist: " + err.message);
   } finally {
     showLoading(false);
   }
 }
+
+
 
 // --- EXPORT/IMPORT ---
 function exportJSON() {
