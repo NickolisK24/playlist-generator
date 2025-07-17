@@ -221,7 +221,9 @@ document.addEventListener("DOMContentLoaded", () => {
     </select>
     <button id="generate-mood">Generate Playlist</button>
   `;
-  document.body.insertBefore(moodContainer, $("playlist"));
+  
+  const playlist = $("playlist");
+  playlist.parentNode.insertBefore(moodContainer, playlist);
 
   $("generate-mood")?.addEventListener("click", generatePlaylistFromMood);
 
